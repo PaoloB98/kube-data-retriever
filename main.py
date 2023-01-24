@@ -15,9 +15,14 @@ client_config.verify_ssl = False
 with kubernetes.client.ApiClient(client_config) as api_client:
     # Create an instance of the API class
     api_instance = kubernetes.client.WellKnownApi(api_client)
+    api_instance_core = kubernetes.client.CoreV1Api(api_client)
 
     try:
         api_response = api_instance.get_service_account_issuer_open_id_configuration()
         pprint(api_response)
+        pprint("-------\n\n")
+        ret = api_instance_core.list_pod_for_all_namespaces(watch=False)
+        for pod in ret.items:
+            print("%s\t%s\t%s" % (pod.status.pod_ip, pod.metadata.namespace, pod.metadata.name))
     except ApiException as e:
         print("Exception when calling WellKnownApi->get_service_account_issuer_open_id_configuration: %s\n" % e)
