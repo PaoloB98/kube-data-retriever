@@ -2,14 +2,13 @@ from __future__ import print_function
 
 import json
 from typing import List
-
 import kubernetes.client
 import yaml
-from kubernetes.client import Configuration
+from kubernetes.client import Configuration, V1PodList, V1PodStatus
 from kubernetes.client.rest import ApiException
 from kubernetes import config
 from pprint import pprint
-from models import UndetailedBlueprint
+from models import UndetailedBlueprint, K8sCluster
 import requests
 
 CONFIG_FILE: str = "./secrets/config"
@@ -28,37 +27,60 @@ def load_configuration() -> dict:
             print(exc)
         return conf
 
-def get_all_pods():
+
+def get_all_pods() -> V1PodList:
+    """
+
+    @:rtype V1PodList
+    :return: Return the list of pods of the k8s controller specified in configuration files
+    """
     # Enter a context with an instance of the API kubernetes.client
     with kubernetes.client.ApiClient(client_config) as api_client:
         # Create an instance of the API class
         api_instance = kubernetes.client.WellKnownApi(api_client)
         api_instance_core = kubernetes.client.CoreV1Api(api_client)
+        pod_list: V1PodList = None
 
         try:
             api_response = api_instance.get_service_account_issuer_open_id_configuration()
             pprint(api_response)
             pprint("-------\n\n")
-            ret = api_instance_core.list_pod_for_all_namespaces(watch=False)
-
-            for pod in ret.items:
+            pod_list = api_instance_core.list_pod_for_all_namespaces(watch=False)
+            pod: V1PodStatus
+            for pod in pod_list.items:
                 print("%s\t%s\t%s" % (pod.status.pod_ip, pod.metadata.namespace, pod.metadata.name))
         except ApiException as e:
             print("Exception when calling WellKnownApi->get_service_account_issuer_open_id_configuration: %s\n" % e)
+        return pod_list
+
 
 def get_blueprints(nfvcl_conf: dict) -> List[UndetailedBlueprint]:
     blue_list: List[UndetailedBlueprint] = []
     port = nfvcl_conf['port']
     ip = nfvcl_conf['ip']
-    response = requests.get("http://{}:{}/nfvcl/v1/api/blue/".format(ip,port))
+    response = requests.get("http://{}:{}/nfvcl/v1/api/blue/".format(ip, port))
     parsed_json = json.loads(response.text)
     for blueprint in parsed_json:
         blue_model_instance = UndetailedBlueprint.parse_obj(blueprint)
         blue_list.append(blue_model_instance)
     return blue_list
 
+
+def get_k8s_cluster(nfvcl_conf: dict):
+    k8s_cluster_list: List[UndetailedBlueprint] = []
+    port = nfvcl_conf['port']
+    ip = nfvcl_conf['ip']
+    response = requests.get("http://{}:{}/v1/topology/kubernetes".format(ip, port))
+    parsed_json = json.loads(response.text)
+    for k8s_clust in parsed_json:
+        k8s_cluster_instance = K8sCluster.parse_obj(k8s_clust)
+        k8s_cluster_list.append(k8s_cluster_instance)
+    return k8s_cluster_list
+
+
 configuration = load_configuration()
 
-#get_all_pods()
+# get_all_pods()
 
-get_blueprints(configuration['nfvcl'])
+instantiated_blueprint_list = get_blueprints(configuration['nfvcl'])
+k8s_cluster_list = get_k8s_cluster(configuration['nfvcl'])

@@ -1,1 +1,2 @@
 from .blueprint_undetailed_model import UndetailedBlueprint, UndetailedBlueprintList
+from .k8s_cluster_model import K8sCluster
