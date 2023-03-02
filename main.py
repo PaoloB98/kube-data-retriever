@@ -13,9 +13,9 @@ import requests
 
 CONFIG_FILE: str = "./secrets/config"
 
-client_config = type.__call__(Configuration)
-config.load_kube_config(config_file=CONFIG_FILE, context=None, client_configuration=client_config, persist_config=False)
-client_config.verify_ssl = False
+#client_config = type.__call__(Configuration)
+#config.load_kube_config(config_file=CONFIG_FILE, context=None, client_configuration=client_config, persist_config=False)
+#client_config.verify_ssl = False
 
 
 def load_configuration() -> dict:
@@ -28,14 +28,15 @@ def load_configuration() -> dict:
         return conf
 
 
-def get_all_pods() -> V1PodList:
+def get_all_pods(kube_client_config: Configuration) -> V1PodList:
     """
 
     @:rtype V1PodList
     :return: Return the list of pods of the k8s controller specified in configuration files
     """
+
     # Enter a context with an instance of the API kubernetes.client
-    with kubernetes.client.ApiClient(client_config) as api_client:
+    with kubernetes.client.ApiClient(kube_client_config) as api_client:
         # Create an instance of the API class
         api_instance = kubernetes.client.WellKnownApi(api_client)
         api_instance_core = kubernetes.client.CoreV1Api(api_client)
@@ -80,7 +81,11 @@ def get_k8s_cluster(nfvcl_conf: dict):
 
 configuration = load_configuration()
 
+kube_conf = Configuration(host="https://192.168.17.28:6443", api_key="token-zjkrn:4nd79pgpjtmh486g9tk2j6kq6vjxdzvswt7mm2tfg5wgdtsjghzmb9")
+kube_conf.verify_ssl = False
+
+get_all_pods(kube_conf)
 # get_all_pods()
 
-instantiated_blueprint_list = get_blueprints(configuration['nfvcl'])
-k8s_cluster_list = get_k8s_cluster(configuration['nfvcl'])
+#instantiated_blueprint_list = get_blueprints(configuration['nfvcl'])
+#k8s_cluster_list = get_k8s_cluster(configuration['nfvcl'])
